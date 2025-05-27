@@ -55,6 +55,7 @@ def get_posts():
     
     return {"data" : posts}
 
+#code to insert one post
 @app.post("/posts", status_code = status.HTTP_201_CREATED)
 def create_posts(post : Post):
     cursor.execute(""" insert into posts (title, content, published) values (%s, %s, %s) returning * """, \
@@ -63,6 +64,43 @@ def create_posts(post : Post):
     conn.commit()
     return {"data" : new_post}
 
+#code for get one post
+@app.get("/posts/{id}")
+def get_posts(id : int):
+    cursor.execute("""select * from posts where id = %s""", (str(id)))
+    post = cursor.fetchone()
+    if not post:
+        raise HTTPException(status_code = status.HTTP_404_NOT_FOUND,
+                            detail = "post with id: {id} was not found")
+    return {"data" : post}
+
+#code to delete one record
+@app.delete("/posts/{id}", status_code= status.HTTP_204_NO_CONTENT)
+def delete_posts(id: int):
+    cursor.execute("""delete from posts where id = %s returning * """, (str(id),))
+    deleted_post = cursor.fetchone()
+    conn.commit()
+
+    if deleted_post == None:
+        raise HTTPException(status_code = status.HTTP_404_NOT_FOUND, detail= f"Post with id: {id} does not exist")
+    
+    return Response(status_code = status.HTTP_204_NO_CONTENT)
+
+# code to update one record
+@app.put("/posts/{id}")
+def update_post(id: int, post: Post):
+    
+    cursor.execute("""update posts set title = %s, content = %s, published = %s where id = %s returning *""", \
+    (post.title, post.content, post.published, str(id)))
+
+    updated_post = cursor.fetchone()
+    conn.commit()
+    if updated_post == None:
+        raise HTTPException(status_code = status.HTTP_404_NOT_FOUND, detail= f"Post with id: {id} does not exist")
+    
+
+    return{"data": updated_post}
+
 @app.get("/posts/{id}")
 def get_posts(id : int):
     print(type(id))
@@ -70,7 +108,9 @@ def get_posts(id : int):
     if not post:
         raise HTTPException(status_code = status.HTTP_404_NOT_FOUND,
                             detail = "post with id: {id} was not found")
-        return{"post_detail" : post}
+    return{"post_detail" : post}
+
+
 
 @app.delete("/posts/{id}", status_code= status.HTTP_204_NO_CONTENT)
 def delete_posts(id: int):
